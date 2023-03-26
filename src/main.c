@@ -21,6 +21,7 @@
 // SOFTWARE.
 
 #include <time.h>
+#include <sys/time.h>
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -64,7 +65,7 @@ void* determineAverageAngularDistance(void* arg)
     uint32_t i, j;
 
     int* current_thread = (int*)arg;
-    printf("Current thread no is : %d\n", *current_thread + 1);
+    printf("Current thread number is : %d\n", *current_thread + 1);
 
     int start = *current_thread * NUM_STARS / NUM_THREADS;
     int end = (*current_thread + 1) * NUM_STARS / NUM_THREADS;
@@ -185,6 +186,9 @@ int main( int argc, char * argv[] )
   pthread_t tid[NUM_THREADS];
   int thread_num[NUM_THREADS];
 
+  struct timeval start, end;
+  gettimeofday(&start, 0);
+
   for (int i = 0; i < NUM_THREADS; i++)
   {
     thread_num[i] = i;
@@ -204,12 +208,19 @@ int main( int argc, char * argv[] )
     }
   }
 
+  gettimeofday(&end, 0);
+  long seconds = end.tv_sec - start.tv_sec;
+  long microseconds = end.tv_usec - start.tv_usec;
+  double elapsed = seconds + microseconds*1e-6;
+
   pthread_mutex_destroy(&mutex);
 
   // Print the values of the mean, min, and max that were found using threads.
-  printf("Average distance found is %lf\n", mean );
+  printf("\nAverage distance found is %lf\n", mean );
   printf("Minimum distance found is %lf\n", min );
   printf("Maximum distance found is %lf\n", max );
+
+  printf("\nTime taken to calculate average angular distance: %lf seconds\n", elapsed);
 
   return 0;
 }
