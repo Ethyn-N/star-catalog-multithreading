@@ -22,6 +22,7 @@
 
 #include <time.h>
 #include <sys/time.h>
+#include <ctype.h>
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -48,7 +49,7 @@ uint64_t count = 0;
 
 pthread_mutex_t mutex;
 
-#define NUM_THREADS 100
+int NUM_THREADS = 100;
 
 
 void showHelp()
@@ -131,10 +132,37 @@ int main( int argc, char * argv[] )
 
   for (n = 1; n < argc; n++)          
   {
-    if(strcmp(argv[n], "-h" ) == 0)
+    if (strcmp(argv[n], "-h" ) == 0)
     {
       showHelp();
       exit(0);
+    }
+    if (strcmp(argv[n], "-t" ) == 0)
+    {
+      if (argv[n + 1] == NULL)
+      {
+        printf("Invalid use of '-t' command.\nUse: -t Number of threads to use\n");
+        exit(0);
+      }
+      else
+      {
+        if (atoi(argv[n + 1]) == 0)
+        {
+          printf("'%s' is not a number.\nUse: -t Number of threads to use\n", argv[n + 1]);
+          exit(0);
+        }
+
+        for (int i = 0; i < strlen(argv[n + 1]); i++)
+        {
+          if(!isdigit(argv[n + 1][i]))
+          {
+            printf("'%s' is an invalid amount of threads\n", argv[n + 1]);
+            exit(0);
+          }
+        }
+
+        NUM_THREADS = atoi(argv[n + 1]);
+      }
     }
   }
 
