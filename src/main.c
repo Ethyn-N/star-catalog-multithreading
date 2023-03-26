@@ -31,6 +31,7 @@
 #include "utility.h"
 #include "star.h"
 #include "float.h"
+#include <pthread.h>
 
 #define NUM_STARS 30000 
 #define MAX_LINE 1024
@@ -41,6 +42,12 @@ uint8_t   (*distance_calculated)[NUM_STARS];
 
 double  min  = FLT_MAX;
 double  max  = FLT_MIN;
+double  mean = 0;
+uint64_t count = 0;
+
+pthread_mutex_t mutex;
+
+#define NUM_THREADS 100
 
 
 void showHelp()
@@ -51,50 +58,58 @@ void showHelp()
   printf("-h          Show this help\n");
 }
 
-// 
-// Embarassingly inefficient, intentionally bad method
-// to calculate all entries one another to determine the
-// average angular separation between any two stars 
-float determineAverageAngularDistance( struct Star arr[] )
+
+void* determineAverageAngularDistance(void* arg)
 {
-    double mean = 0;
-
     uint32_t i, j;
-    uint64_t count = 0;
 
+    int* current_thread = (int*)arg;
+    printf("Current thread no is : %d\n", *current_thread + 1);
+
+    int start = *current_thread * NUM_STARS / NUM_THREADS;
+    int end = (*current_thread + 1) * NUM_STARS / NUM_THREADS;
+
+    printf("Here we will check %d to %d\n", start, end);
 
     for (i = 0; i < NUM_STARS; i++)
     {
-      for (j = 0; j < NUM_STARS; j++)
-      {
-        if( i!=j && distance_calculated[i][j] == 0 )
+      for (j = start; j < end; j++)
+      {        
+        if( i!=j && distance_calculated[i][j] == 0 && distance_calculated[j][i] == 0)
         {
-          double distance = calculateAngularDistance( arr[i].RightAscension, arr[j].Declination,
-                                                      arr[j].RightAscension, arr[j].Declination ) ;
           distance_calculated[i][j] = 1;
-          distance_calculated[j][i] = 1;
-          count++;
 
-          if( min > distance )
-          {
+          if (distance_calculated[j][i] == 1)
+            continue;
+
+          double distance = calculateAngularDistance( star_array[i].RightAscension, star_array[j].Declination,
+                                                      star_array[j].RightAscension, star_array[i].Declination ) ;
+
+          if (distance_calculated[j][i] == 1)
+            continue;
+
+          if (min > distance)
             min = distance;
-          }
 
-          if( max < distance )
-          {
+          if (max < distance)
             max = distance;
-          }
-          mean = mean + (distance-mean)/count;
+
+          distance_calculated[j][i] = 1;
+
+          pthread_mutex_lock(&mutex);
+          count++;
+          mean = mean + (distance - mean) / count;
+          pthread_mutex_unlock(&mutex);
         }
       }
     }
-    return mean;
+    printf("Done checking %d to %d\n", start, end);
+    pthread_exit(NULL);
 }
 
 
 int main( int argc, char * argv[] )
 {
-
   FILE *fp;
   uint32_t star_count = 0;
 
@@ -102,7 +117,7 @@ int main( int argc, char * argv[] )
 
   distance_calculated = malloc(sizeof(uint8_t[NUM_STARS][NUM_STARS]));
 
-  if( distance_calculated == NULL )
+  if (distance_calculated == NULL)
   {
     uint64_t num_stars = NUM_STARS;
     uint64_t size = num_stars * num_stars * sizeof(uint8_t);
@@ -110,29 +125,21 @@ int main( int argc, char * argv[] )
     exit( EXIT_FAILURE );
   }
 
-  int i, j;
   // default every thing to 0 so we calculated the distance.
-  // This is really inefficient and should be replace by a memset
-  for (i = 0; i < NUM_STARS; i++)
-  {
-    for (j = 0; j < NUM_STARS; j++)
-    {
-      distance_calculated[i][j] = 0;
-    }
-  }
+  memset(distance_calculated, 0, sizeof(distance_calculated[0][0]) * NUM_STARS * NUM_STARS);
 
-  for( n = 1; n < argc; n++ )          
+  for (n = 1; n < argc; n++)          
   {
-    if( strcmp(argv[n], "-help" ) == 0 )
+    if(strcmp(argv[n], "-h" ) == 0)
     {
       showHelp();
       exit(0);
     }
   }
 
-  fp = fopen( "data/tycho-trimmed.csv", "r" );
+  fp = fopen("data/tycho-trimmed.csv", "r");
 
-  if( fp == NULL )
+  if (fp == NULL)
   {
     printf("ERROR: Unable to open the file data/tycho-trimmed.csv\n");
     exit(1);
@@ -148,7 +155,7 @@ int main( int argc, char * argv[] )
             tok && *tok;
             tok = strtok(NULL, " "))
     {
-       switch( column )
+       switch(column)
        {
           case 0:
               star_array[star_count].ID = atoi(tok);
@@ -163,7 +170,7 @@ int main( int argc, char * argv[] )
               break;
 
           default: 
-             printf("ERROR: line %d had more than 3 columns\n", star_count );
+             printf("ERROR: line %d had more than 3 columns\n", star_count);
              exit(1);
              break;
        }
@@ -171,11 +178,36 @@ int main( int argc, char * argv[] )
     }
     star_count++;
   }
-  printf("%d records read\n", star_count );
+  printf("%d records read\n", star_count);
 
-  // Find the average angular distance in the most inefficient way possible
-  double distance =  determineAverageAngularDistance( star_array );
-  printf("Average distance found is %lf\n", distance );
+  pthread_mutex_init(&mutex, NULL);
+
+  pthread_t tid[NUM_THREADS];
+  int thread_num[NUM_THREADS];
+
+  for (int i = 0; i < NUM_THREADS; i++)
+  {
+    thread_num[i] = i;
+    if(pthread_create(&tid[i], NULL, determineAverageAngularDistance, (void*)&thread_num[i]))
+    {
+      printf("ERROR: Thread creation failed\n");
+			exit(EXIT_FAILURE);
+    }
+  }
+
+  for (int i = 0; i < NUM_THREADS; i++)
+  {
+    if(pthread_join(tid[i], NULL))
+    {
+      printf("ERROR: Thread joining failed\n");
+			exit(EXIT_FAILURE);
+    }
+  }
+
+  pthread_mutex_destroy(&mutex);
+
+  // Print the values of the mean, min, and max that were found using threads.
+  printf("Average distance found is %lf\n", mean );
   printf("Minimum distance found is %lf\n", min );
   printf("Maximum distance found is %lf\n", max );
 
