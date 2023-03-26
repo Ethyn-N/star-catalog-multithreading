@@ -49,7 +49,7 @@ uint64_t count = 0;
 
 pthread_mutex_t mutex;
 
-int NUM_THREADS = 100;
+int NUM_THREADS = 1;
 
 
 void showHelp()
@@ -60,14 +60,20 @@ void showHelp()
   printf("-h          Show this help\n");
 }
 
-
+// Void function is used in call to create threads.
+// The thread number is used as an argument.
+// The function splits star_array into sections where each thread
+// does work on.
 void* determineAverageAngularDistance(void* arg)
 {
     uint32_t i, j;
 
+    // Current thread number
     int* current_thread = (int*)arg;
     printf("Current thread number is : %d\n", *current_thread + 1);
-
+    
+    // Calculate what section of star_array a thread will work on.
+    // Evenly splits work based on number of threads.
     int start = *current_thread * NUM_STARS / NUM_THREADS;
     int end = (*current_thread + 1) * NUM_STARS / NUM_THREADS;
 
@@ -81,12 +87,16 @@ void* determineAverageAngularDistance(void* arg)
         {
           distance_calculated[i][j] = 1;
 
+          // Check in case another thread has already done work on the two stars.
+          // Prevents calculating the distance between two stars twice.
           if (distance_calculated[j][i] == 1)
             continue;
 
           double distance = calculateAngularDistance( star_array[i].RightAscension, star_array[j].Declination,
                                                       star_array[j].RightAscension, star_array[i].Declination ) ;
-
+          
+          // Check in case another thread has already done work on the two stars.
+          // Prevents calculating the distance between two stars twice.
           if (distance_calculated[j][i] == 1)
             continue;
 
@@ -98,6 +108,8 @@ void* determineAverageAngularDistance(void* arg)
 
           distance_calculated[j][i] = 1;
 
+          // Mutex locks global variables count and mean.
+          // Prevents race condition in mean calculation.
           pthread_mutex_lock(&mutex);
           count++;
           mean = mean + (distance - mean) / count;
@@ -127,7 +139,7 @@ int main( int argc, char * argv[] )
     exit( EXIT_FAILURE );
   }
 
-  // default every thing to 0 so we calculated the distance.
+  // Default every thing to 0 so we calculated the distance.
   memset(distance_calculated, 0, sizeof(distance_calculated[0][0]) * NUM_STARS * NUM_STARS);
 
   for (n = 1; n < argc; n++)          
@@ -211,9 +223,12 @@ int main( int argc, char * argv[] )
 
   pthread_mutex_init(&mutex, NULL);
 
+  // Initialize array of threads and array of thread numbers.
   pthread_t tid[NUM_THREADS];
   int thread_num[NUM_THREADS];
 
+  // Set up and start timer.
+  // Times how long it takes for threads to complete.
   struct timeval start, end;
   gettimeofday(&start, 0);
 
@@ -236,6 +251,8 @@ int main( int argc, char * argv[] )
     }
   }
 
+  // End timer.
+  // Calculate how much time has elapsed in calculating average distance.
   gettimeofday(&end, 0);
   long seconds = end.tv_sec - start.tv_sec;
   long microseconds = end.tv_usec - start.tv_usec;
@@ -248,6 +265,7 @@ int main( int argc, char * argv[] )
   printf("Minimum distance found is %lf\n", min );
   printf("Maximum distance found is %lf\n", max );
 
+  // Print time taken to for threads.
   printf("\nTime taken to calculate average angular distance: %lf seconds\n", elapsed);
 
   return 0;
