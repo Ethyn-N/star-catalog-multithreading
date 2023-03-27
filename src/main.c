@@ -94,11 +94,6 @@ void* determineAverageAngularDistance(void* arg)
 
           double distance = calculateAngularDistance( star_array[i].RightAscension, star_array[j].Declination,
                                                       star_array[j].RightAscension, star_array[i].Declination ) ;
-          
-          // Check in case another thread has already done work on the two stars.
-          // Prevents calculating the distance between two stars twice.
-          if (distance_calculated[j][i] == 1)
-            continue;
 
           if (min > distance)
             min = distance;
