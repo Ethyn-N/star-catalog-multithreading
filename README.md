@@ -1,6 +1,3 @@
-[![Open in Codespaces](https://classroom.github.com/assets/launch-codespace-f4981d0f882b2a3f0472912d15f9806d57e124e0fc890972558857b51b24a6f9.svg)](https://classroom.github.com/open-in-codespaces?assignment_repo_id=10550999)
-# Star-Catalog-Assignment
-
 Description
 
 In this assignment you are provided code that serially calculate the average angular distance between 50,000 stars in the Tycho Star Catalogue.  This code, running serially, takes a significant amount of time to run.
@@ -20,26 +17,3 @@ In this assignment you are provided code that serially calculate the average ang
 - A discussion of any anomalies you found in the resulting data.
 - A conclusion explaining the optimal number of threads.
 - The report must be in PDF form and submitted to your repository. Any other format will not be accepted.
-
-## Administrative
-
-This assignment must be coded in C. Any other language will result in 0 points. You 
-programs will be compiled and graded on the course GitHub Codespace. Code that does not compile 
-with the provided makefile will result in a 0.
-
-Your program is to be turned in via the Feedback GitHub pull request. **Do not merge this pull request**.  Submission time is determined by 
-the GitHub system time. You may push your code as often as you wish. Only your 
-last submission will be graded. 
-
-There are coding resources and working code you may use in the course GitHub repositories.  You are free to use any of that code in your program if needed. You may use no other outside code.
-
-## Academic Integrity
-This assignment must be 100% your own work. No code may be copied from friends, 
-previous students, books, web pages, etc. All code submitted is automatically checked 
-against a database of previous semester’s graded assignments, current student’s code 
-and common web sources. By submitting your code on GitHub you are attesting that 
-you have neither given nor received unauthorized assistance on this work. Code that 
-is copied from an external source or used as inspiration, excluding the 
-course github, will result in a 0 for the assignment and referral to 
-the Office of Student Conduct.
-
